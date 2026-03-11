@@ -60,6 +60,7 @@ defmodule RodarDemo.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:rodar_bpmn, github: "rodar-project/rodar_bpmn"},
+      {:rodar_release, github: "rodar-project/rodar_release", only: :dev},
       {:tidewave, "~> 0.1", only: :dev}
     ]
   end
