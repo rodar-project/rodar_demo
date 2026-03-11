@@ -5,14 +5,6 @@ defmodule RodarDemo.Workflow.Manager do
   alias RodarBpmn.Context
   alias RodarBpmn.Activity.Task.User, as: UserTask
 
-  @handler_map %{
-    "Task_Validate" => RodarDemo.Workflow.Handlers.ValidateOrder,
-    "Task_AutoApprove" => RodarDemo.Workflow.Handlers.AutoApprove,
-    "Task_Fulfill" => RodarDemo.Workflow.Handlers.FulfillOrder,
-    "Task_SendConfirmation" => RodarDemo.Workflow.Handlers.SendConfirmation,
-    "Task_NotifyRejection" => RodarDemo.Workflow.Handlers.NotifyRejection
-  }
-
   # Client API
 
   def start_link(_opts) do
@@ -176,20 +168,49 @@ defmodule RodarDemo.Workflow.Manager do
     diagram = Diagram.load(xml)
     [{:bpmn_process, attrs, elements}] = diagram.processes
 
-    # Patch service task elements with handler modules
-    patched_elements =
-      Enum.into(elements, %{}, fn
-        {id, {:bpmn_activity_task_service, elem_attrs}} ->
-          case Map.get(@handler_map, id) do
-            nil -> {id, {:bpmn_activity_task_service, elem_attrs}}
-            handler -> {id, {:bpmn_activity_task_service, Map.put(elem_attrs, :handler, handler)}}
-          end
+    # Normalize script task elements (:scriptFormat -> :type) for the handler
+    elements = normalize_script_tasks(elements)
 
-        {id, elem} ->
-          {id, elem}
-      end)
+    # Register service task handlers in TaskRegistry by element ID
+    RodarBpmn.TaskRegistry.register("Task_Validate", RodarDemo.Workflow.Handlers.ValidateOrder)
+    RodarBpmn.TaskRegistry.register("Task_Fulfill", RodarDemo.Workflow.Handlers.FulfillOrder)
 
-    RodarBpmn.Registry.register("order_processing", {:bpmn_process, attrs, patched_elements})
+    RodarBpmn.TaskRegistry.register(
+      "Task_SendConfirmation",
+      RodarDemo.Workflow.Handlers.SendConfirmation
+    )
+
+    RodarBpmn.TaskRegistry.register(
+      "Task_NotifyRejection",
+      RodarDemo.Workflow.Handlers.NotifyRejection
+    )
+
+    RodarBpmn.Registry.register("order_processing", {:bpmn_process, attrs, elements})
+  end
+
+  @script_output_variables %{
+    "Task_AutoApprove" => "approved"
+  }
+
+  defp normalize_script_tasks(elements) do
+    Map.new(elements, fn
+      {id, {:bpmn_activity_task_script, %{scriptFormat: format} = attrs}} ->
+        attrs =
+          attrs
+          |> Map.delete(:scriptFormat)
+          |> Map.put(:type, format)
+          |> then(fn a ->
+            case Map.get(@script_output_variables, id) do
+              nil -> a
+              var -> Map.put(a, :output_variable, var)
+            end
+          end)
+
+        {id, {:bpmn_activity_task_script, attrs}}
+
+      {id, elem} ->
+        {id, elem}
+    end)
   end
 
   defp broadcast_update(order) do

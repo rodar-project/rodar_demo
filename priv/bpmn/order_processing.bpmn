@@ -27,10 +27,11 @@
       <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
       <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:serviceTask id="Task_AutoApprove" name="Auto Approve">
+    <bpmn:scriptTask id="Task_AutoApprove" name="Auto Approve" scriptFormat="elixir">
       <bpmn:incoming>Flow_AutoApprove</bpmn:incoming>
       <bpmn:outgoing>Flow_AutoToMerge</bpmn:outgoing>
-    </bpmn:serviceTask>
+      <bpmn:script>true</bpmn:script>
+    </bpmn:scriptTask>
     <bpmn:exclusiveGateway id="GW_Merge" name="Merge">
       <bpmn:incoming>Flow_Approved</bpmn:incoming>
       <bpmn:incoming>Flow_AutoToMerge</bpmn:incoming>

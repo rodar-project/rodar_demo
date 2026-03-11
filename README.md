@@ -1,13 +1,14 @@
 # RodarBPMN Demo: Order Processing Workflow
 
-A reference application demonstrating how to integrate **RodarBPMN** — an Elixir BPMN 2.0 execution engine — into a Phoenix LiveView application. This demo implements a complete order processing workflow with exclusive gateways, user tasks, service task handlers, and an interactive BPMN diagram viewer.
+A reference application demonstrating how to integrate **RodarBPMN** — an Elixir BPMN 2.0 execution engine — into a Phoenix LiveView application. This demo implements a complete order processing workflow with exclusive gateways, user tasks, service task handlers, inline script tasks, and an interactive BPMN diagram viewer.
 
 ## The Workflow
 
 ![Order Processing Workflow](priv/static/images/diagram.svg)
 
 **Key behaviors:**
-- Orders with amount <= 1000 auto-approve and complete immediately
+
+- Orders with amount <= 1000 auto-approve via an inline script task and complete immediately
 - Orders with amount > 1000 pause at a user task for manager approval
 - Approved orders continue to fulfillment and confirmation
 - Rejected orders take a separate path to rejection notification
@@ -28,13 +29,13 @@ RodarBPMN is a token-based BPMN 2.0 execution engine. It parses standard BPMN XM
 
 ### Core Concepts
 
-| Concept | Description |
-|---------|-------------|
-| **Process Definition** | A parsed BPMN XML stored in the Registry, keyed by process ID |
-| **Process Instance** | A running GenServer (`RodarBpmn.Process`) executing a definition |
-| **Context** | A GenServer holding all mutable state: data, metadata, execution history |
-| **Token** | A struct that flows through the process graph, tracking current position |
-| **Element** | A tagged tuple `{:bpmn_type, %{id: ..., outgoing: [...], ...}}` |
+| Concept                | Description                                                              |
+| ---------------------- | ------------------------------------------------------------------------ |
+| **Process Definition** | A parsed BPMN XML stored in the Registry, keyed by process ID            |
+| **Process Instance**   | A running GenServer (`RodarBpmn.Process`) executing a definition         |
+| **Context**            | A GenServer holding all mutable state: data, metadata, execution history |
+| **Token**              | A struct that flows through the process graph, tracking current position |
+| **Element**            | A tagged tuple `{:bpmn_type, %{id: ..., outgoing: [...], ...}}`          |
 
 ### Execution Flow
 
@@ -74,7 +75,7 @@ This section walks through each step of integrating RodarBPMN into your own appl
 # mix.exs
 defp deps do
   [
-    {:rodar_bpmn, path: "../rodar-bpmn"}
+    {:rodar_bpmn, github: "rodar-project/rodar_bpmn"}
   ]
 end
 ```
@@ -155,49 +156,36 @@ end
 
 The handler receives two arguments:
 
-| Argument | Type | Description |
-|----------|------|-------------|
-| `attrs` | `map` | The BPMN element's parsed attributes (`:id`, `:name`, `:outgoing`, etc.) |
-| `data` | `map` | All current process data (accumulated from previous tasks) |
+| Argument | Type  | Description                                                              |
+| -------- | ----- | ------------------------------------------------------------------------ |
+| `attrs`  | `map` | The BPMN element's parsed attributes (`:id`, `:name`, `:outgoing`, etc.) |
+| `data`   | `map` | All current process data (accumulated from previous tasks)               |
 
 Return values:
 
-| Return | Effect |
-|--------|--------|
+| Return                 | Effect                                                         |
+| ---------------------- | -------------------------------------------------------------- |
 | `{:ok, %{key: value}}` | Map merged into context data, token released to outgoing flows |
-| `{:ok, non_map}` | Token released, no data merge |
-| `{:error, reason}` | Execution stops with error status |
+| `{:ok, non_map}`       | Token released, no data merge                                  |
+| `{:error, reason}`     | Execution stops with error status                              |
 
-### Step 5: Parse, Patch, and Register
+### Step 5: Register Handlers and Process Definition
 
-The BPMN XML parser doesn't know about your Elixir handler modules. You need to parse the XML, patch service task elements with `:handler` atoms, then register the definition:
+Register your handler modules in the `TaskRegistry` by BPMN element ID, then parse and register the process definition:
 
 ```elixir
-# Parse the XML
+# Register handlers by task element ID
+RodarBpmn.TaskRegistry.register("Task_DoWork", MyApp.Handlers.DoWork)
+RodarBpmn.TaskRegistry.register("Task_Notify", MyApp.Handlers.Notify)
+
+# Parse and register the BPMN definition
 xml = File.read!("priv/bpmn/my_process.bpmn")
 diagram = RodarBpmn.Engine.Diagram.load(xml)
-[{:bpmn_process, attrs, elements}] = diagram.processes
-
-# Map task IDs to handler modules
-handler_map = %{
-  "Task_DoWork" => MyApp.Handlers.DoWork,
-  "Task_Notify" => MyApp.Handlers.Notify
-}
-
-# Patch service task elements with handler modules
-patched = Enum.into(elements, %{}, fn
-  {id, {:bpmn_activity_task_service, elem_attrs}} ->
-    case Map.get(handler_map, id) do
-      nil     -> {id, {:bpmn_activity_task_service, elem_attrs}}
-      handler -> {id, {:bpmn_activity_task_service, Map.put(elem_attrs, :handler, handler)}}
-    end
-  {id, elem} ->
-    {id, elem}
-end)
-
-# Register the definition (auto-increments version)
-RodarBpmn.Registry.register("my_process", {:bpmn_process, attrs, patched})
+[{:bpmn_process, _attrs, _elements} = definition] = diagram.processes
+RodarBpmn.Registry.register("my_process", definition)
 ```
+
+The `Service` task handler automatically resolves handlers from the `TaskRegistry` by element ID at runtime — no manual patching of parsed elements is needed.
 
 ### Step 6: Create and Run Process Instances
 
@@ -285,6 +273,7 @@ The default. Expressions are parsed and evaluated against an AST allowlist — n
 ```
 
 Available in expressions:
+
 - Data access: `data["key"]`, `data[:key]`
 - Comparisons: `==`, `!=`, `>`, `<`, `>=`, `<=`
 - Boolean: `and`, `or`, `not`
@@ -346,7 +335,17 @@ Fork to all outgoing paths simultaneously, then wait for all to complete before 
 
 ### Script Tasks
 
-Execute inline scripts (Elixir or FEEL) without a handler module:
+Execute inline scripts (Elixir or FEEL) without a handler module. The script result is stored in the context under the task's `:output_variable` (defaults to `:script_result`).
+
+This demo uses a script task for `Task_AutoApprove` — it evaluates `true` and stores the result as `"approved"` in the process data:
+
+```xml
+<bpmn:scriptTask id="Task_AutoApprove" name="Auto Approve" scriptFormat="elixir">
+  <bpmn:script>true</bpmn:script>
+</bpmn:scriptTask>
+```
+
+Script tasks can also perform computations using process data:
 
 ```xml
 <bpmn:scriptTask id="Task_Calculate" name="Calculate Total"
@@ -525,7 +524,23 @@ RodarBpmn.Observability.health()
 
 ### Custom Task Handlers
 
-Register custom handlers for any element type or specific element ID:
+Register handlers for service tasks by element ID. The `Service` module automatically resolves them from the `TaskRegistry` at runtime:
+
+```elixir
+defmodule MyApp.Handlers.CheckInventory do
+  @behaviour RodarBpmn.Activity.Task.Service.Handler
+
+  @impl true
+  def execute(_attrs, data) do
+    {:ok, %{"in_stock" => data["quantity"] > 0}}
+  end
+end
+
+# Register by element ID — resolved automatically by service tasks
+RodarBpmn.TaskRegistry.register("Task_CheckInventory", MyApp.Handlers.CheckInventory)
+```
+
+For non-service task types (or fully custom element types), implement the lower-level `RodarBpmn.TaskHandler` behaviour:
 
 ```elixir
 defmodule MyApp.CustomHandler do
@@ -538,11 +553,8 @@ defmodule MyApp.CustomHandler do
   end
 end
 
-# Register by element ID (highest priority)
-RodarBpmn.TaskRegistry.register("Task_Custom_123", MyApp.CustomHandler)
-
-# Or register by element type (fallback)
-RodarBpmn.TaskRegistry.register(:bpmn_activity_task_business_rule, MyApp.RuleHandler)
+# Register by element type (fallback for all tasks of this type)
+RodarBpmn.TaskRegistry.register(:bpmn_activity_task_business_rule, MyApp.CustomHandler)
 ```
 
 ### Multi-Participant Collaboration
@@ -567,14 +579,13 @@ RodarBpmn.Collaboration.stop(%{instances: instances})
 ```
 rodar_demo/
   priv/bpmn/
-    order_processing.bpmn              # BPMN 2.0 XML with diagram coordinates
+    order_processing.bpmn              # BPMN 2.0 XML (service tasks, script task, user task)
   lib/rodar_demo/
     application.ex                     # Supervision tree (includes Workflow.Manager)
     workflow/
-      manager.ex                       # GenServer: parses BPMN, manages orders, PubSub
+      manager.ex                       # GenServer: parses BPMN, registers handlers, manages orders
       handlers/
         validate_order.ex              # Validates customer + amount > 0
-        auto_approve.ex                # Auto-approves orders <= 1000
         fulfill_order.ex               # Generates fulfillment ID
         send_confirmation.ex           # Marks confirmation sent
         notify_rejection.ex            # Records rejection
@@ -587,6 +598,8 @@ rodar_demo/
     js/bpmn_viewer_hook.js             # bpmn-js LiveView hook with node highlighting
     css/app.css                        # BPMN viewer styles (visited/active markers)
 ```
+
+Note: Auto-approval logic is embedded directly in the BPMN file as an inline Elixir script task, rather than using a separate handler module.
 
 ## Supervision Tree
 
