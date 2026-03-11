@@ -4,41 +4,7 @@ A reference application demonstrating how to integrate **RodarBPMN** — an Elix
 
 ## The Workflow
 
-```
-Start (Order Received)
-  |
-  v
-[Validate Order] ---- service task
-  |
-  v
-<Amount > 1000?> ---- exclusive gateway
-  |           |
-  | Yes       | No (default)
-  v           v
-[Manager    [Auto Approve] ---- service task
- Approval]      |
-  |  user task  |
-  v             |
-<Approved?> --- exclusive gateway
-  |        |
-  | Yes    | No (default)
-  v        v
-  |     [Notify Rejection] ---- service task
-  |        |
-  |        v
-  |     (End: Order Rejected)
-  |
-  +---> <Merge> ---- exclusive gateway (converging)
-          |
-          v
-       [Fulfill Order] ---- service task
-          |
-          v
-       [Send Confirmation] ---- service task
-          |
-          v
-       (End: Order Complete)
-```
+![Order Processing Workflow](priv/static/images/diagram.svg)
 
 **Key behaviors:**
 - Orders with amount <= 1000 auto-approve and complete immediately
