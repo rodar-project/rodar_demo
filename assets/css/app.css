@@ -136,3 +136,10 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.65; }
 }
+
+/* User task nodes - orange when visited/active (overrides green/amber) */
+:is(.bpmn-visited.bpmn-user-task, .bpmn-active.bpmn-user-task) :is(.djs-visual > rect, .djs-visual > path) {
+  stroke: oklch(65% 0.19 45) !important;
+  fill: oklch(90% 0.1 45 / 0.35) !important;
+  animation: none !important;
+}

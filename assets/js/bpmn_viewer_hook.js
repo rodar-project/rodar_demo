@@ -22,6 +22,8 @@ const BpmnViewerHook = {
       const canvas = this.viewer.get("canvas")
       canvas.zoom("fit-viewport", "auto")
 
+      this.highlightUserTasks()
+
       // Apply initial state from data attributes
       const visited = JSON.parse(this.el.dataset.visitedNodes || "[]")
       const active = JSON.parse(this.el.dataset.activeNodes || "[]")
@@ -52,6 +54,17 @@ const BpmnViewerHook = {
     active.forEach((nodeId) => {
       if (elementRegistry.get(nodeId)) {
         canvas.addMarker(nodeId, "bpmn-active")
+      }
+    })
+  },
+
+  highlightUserTasks() {
+    const canvas = this.viewer.get("canvas")
+    const elementRegistry = this.viewer.get("elementRegistry")
+
+    elementRegistry.forEach((element) => {
+      if (element.type === "bpmn:UserTask") {
+        canvas.addMarker(element.id, "bpmn-user-task")
       }
     })
   },
