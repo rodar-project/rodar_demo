@@ -59,7 +59,7 @@ defmodule RodarDemo.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:rodar_bpmn, path: "../rodar-bpmn"},
+      {:rodar_bpmn, github: "rodar-project/rodar_bpmn"},
       {:tidewave, "~> 0.1", only: :dev}
     ]
   end
