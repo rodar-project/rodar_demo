@@ -19,6 +19,7 @@ defmodule RodarDemoWeb.Router do
 
     live "/", OrderLive.Index, :index
     live "/orders/new", OrderLive.Index, :new
+    live "/orders/bulk", OrderLive.Index, :bulk
     live "/orders/:id", OrderLive.Show, :show
   end
 

@@ -1,6 +1,9 @@
 <.header>
   Orders
   <:actions>
+    <.button navigate={~p"/orders/bulk"}>
+      <.icon name="hero-bolt" class="size-4 mr-1" /> Bulk Simulation
+    </.button>
     <.button navigate={~p"/orders/new"} variant="primary">
       <.icon name="hero-plus" class="size-4 mr-1" /> New Order
     </.button>
@@ -22,6 +25,44 @@
       </.form>
     </div>
     <.link navigate={~p"/"} class="modal-backdrop"><span class="sr-only">Close</span></.link>
+  </div>
+<% end %>
+
+<%= if @live_action == :bulk do %>
+  <div class="modal modal-open">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg mb-4">Bulk Order Simulation</h3>
+      <p class="text-sm text-base-content/60 mb-4">
+        Creates orders with random data. Orders over $1,000 require approval
+        and will be processed by simulated workers.
+      </p>
+      <.form for={%{}} as={:bulk} phx-submit="start_bulk">
+        <.input name="bulk[quantity]" label="Number of orders" type="number"
+                value="20" min="1" max="1000" required />
+        <.input name="bulk[workers]" label="Simulated users (workers)" type="number"
+                value="3" min="1" max="20" required />
+        <.input name="bulk[avg_time]" label="Avg seconds per approval" type="number"
+                value="5" min="1" max="60" required />
+        <div class="modal-action">
+          <.button navigate={~p"/"}>Cancel</.button>
+          <.button type="submit" variant="primary">Start Simulation</.button>
+        </div>
+      </.form>
+    </div>
+    <.link navigate={~p"/"} class="modal-backdrop"><span class="sr-only">Close</span></.link>
+  </div>
+<% end %>
+
+<%= if @bulk_progress do %>
+  <div class="alert alert-info mb-4">
+    <%= case @bulk_progress.phase do %>
+      <% :creating -> %>
+        <.icon name="hero-arrow-path" class="size-5 animate-spin" />
+        <span>Creating orders: {@bulk_progress.created}/{@bulk_progress.total}</span>
+      <% :processing -> %>
+        <.icon name="hero-arrow-path" class="size-5 animate-spin" />
+        <span>Workers processing approvals...</span>
+    <% end %>
   </div>
 <% end %>
 

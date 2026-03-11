@@ -7,10 +7,11 @@ defmodule RodarDemoWeb.OrderLive.Index do
   def mount(_params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(RodarDemo.PubSub, "orders")
+      Phoenix.PubSub.subscribe(RodarDemo.PubSub, "bulk_simulation")
     end
 
     orders = Manager.list_orders()
-    {:ok, assign(socket, orders: orders, page_title: "Orders")}
+    {:ok, assign(socket, orders: orders, page_title: "Orders", bulk_progress: nil)}
   end
 
   @impl true
@@ -24,6 +25,10 @@ defmodule RodarDemoWeb.OrderLive.Index do
 
   defp apply_action(socket, :index, _params) do
     assign(socket, page_title: "Orders")
+  end
+
+  defp apply_action(socket, :bulk, _params) do
+    assign(socket, page_title: "Bulk Simulation")
   end
 
   @impl true
@@ -52,6 +57,22 @@ defmodule RodarDemoWeb.OrderLive.Index do
     end
   end
 
+  def handle_event("start_bulk", %{"bulk" => params}, socket) do
+    quantity = String.to_integer(params["quantity"])
+    workers = String.to_integer(params["workers"])
+    avg_time = String.to_integer(params["avg_time"])
+
+    Task.start(fn ->
+      RodarDemo.Workflow.BulkSimulator.run(quantity, workers, avg_time)
+    end)
+
+    {:noreply,
+     socket
+     |> assign(bulk_progress: %{phase: :creating, created: 0, total: quantity})
+     |> put_flash(:info, "Bulk simulation started: #{quantity} orders, #{workers} workers")
+     |> push_navigate(to: ~p"/")}
+  end
+
   def handle_event("reject", %{"id" => id}, socket) do
     order_id = String.to_integer(id)
 
@@ -66,8 +87,26 @@ defmodule RodarDemoWeb.OrderLive.Index do
 
   @impl true
   def handle_info({:order_updated, _order}, socket) do
+    # Debounce rapid updates during bulk simulation
+    if socket.assigns[:refresh_timer] do
+      Process.cancel_timer(socket.assigns.refresh_timer)
+    end
+
+    timer = Process.send_after(self(), :refresh_orders, 200)
+    {:noreply, assign(socket, refresh_timer: timer)}
+  end
+
+  def handle_info(:refresh_orders, socket) do
     orders = Manager.list_orders()
-    {:noreply, assign(socket, orders: orders)}
+    {:noreply, assign(socket, orders: orders, refresh_timer: nil)}
+  end
+
+  def handle_info({:bulk_progress, %{phase: :done}}, socket) do
+    {:noreply, assign(socket, bulk_progress: nil)}
+  end
+
+  def handle_info({:bulk_progress, progress}, socket) do
+    {:noreply, assign(socket, bulk_progress: progress)}
   end
 
   defp status_label(:completed), do: "Completed"

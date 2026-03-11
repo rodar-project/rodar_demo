@@ -7,6 +7,8 @@ defmodule RodarDemo.Application do
 
   @impl true
   def start(_type, _args) do
+    RodarBpmn.Telemetry.LogHandler.attach()
+
     children = [
       RodarDemoWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:rodar_demo, :dns_cluster_query) || :ignore},
