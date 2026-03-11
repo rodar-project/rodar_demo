@@ -1,0 +1,72 @@
+<.header>
+  Orders
+  <:actions>
+    <.button navigate={~p"/orders/new"} variant="primary">
+      <.icon name="hero-plus" class="size-4 mr-1" /> New Order
+    </.button>
+  </:actions>
+</.header>
+
+<%= if @live_action == :new do %>
+  <div class="modal modal-open">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg mb-4">Create New Order</h3>
+      <.form for={%{}} as={:order} phx-submit="create_order">
+        <.input name="order[customer]" label="Customer" type="text" value="" required />
+        <.input name="order[item]" label="Item" type="text" value="" required />
+        <.input name="order[amount]" label="Amount" type="number" value="" step="0.01" min="0.01" required />
+        <div class="modal-action">
+          <.button navigate={~p"/"} class="btn">Cancel</.button>
+          <.button type="submit" variant="primary">Create Order</.button>
+        </div>
+      </.form>
+    </div>
+    <.link navigate={~p"/"} class="modal-backdrop"><span class="sr-only">Close</span></.link>
+  </div>
+<% end %>
+
+<%= if @orders == [] do %>
+  <div class="text-center py-12 text-base-content/50">
+    <.icon name="hero-inbox" class="size-12 mx-auto mb-4" />
+    <p class="text-lg">No orders yet</p>
+    <p class="text-sm mt-1">Create your first order to see the BPMN workflow in action.</p>
+  </div>
+<% else %>
+  <.table id="orders" rows={@orders} row_id={fn order -> "order-#{order.id}" end}>
+    <:col :let={order} label="ID">
+      <.link navigate={~p"/orders/#{order.id}"} class="link link-primary">
+        #{order.id}
+      </.link>
+    </:col>
+    <:col :let={order} label="Customer">{order.customer}</:col>
+    <:col :let={order} label="Item">{order.item}</:col>
+    <:col :let={order} label="Amount">
+      ${:erlang.float_to_binary(order.amount / 1, decimals: 2)}
+    </:col>
+    <:col :let={order} label="Status">
+      <span class={[
+        "badge",
+        order.status == :completed && "badge-success",
+        order.status == :awaiting_approval && "badge-warning",
+        order.status == :rejected && "badge-error",
+        order.status == :error && "badge-error",
+        order.status not in [:completed, :awaiting_approval, :rejected, :error] && "badge-ghost"
+      ]}>
+        {status_label(order.status)}
+      </span>
+    </:col>
+    <:action :let={order}>
+      <%= if order.status == :awaiting_approval do %>
+        <button phx-click="approve" phx-value-id={order.id} class="btn btn-success btn-xs">
+          Approve
+        </button>
+        <button phx-click="reject" phx-value-id={order.id} class="btn btn-error btn-xs">
+          Reject
+        </button>
+      <% end %>
+      <.link navigate={~p"/orders/#{order.id}"} class="btn btn-ghost btn-xs">
+        View
+      </.link>
+    </:action>
+  </.table>
+<% end %>

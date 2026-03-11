@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_1"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="order_processing" name="Order Processing" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Order Received">
+      <bpmn:outgoing>Flow_ToValidate</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_Validate" name="Validate Order">
+      <bpmn:incoming>Flow_ToValidate</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_Amount" name="Amount > 1000?" default="Flow_AutoApprove">
+      <bpmn:incoming>Flow_ToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_NeedApproval</bpmn:outgoing>
+      <bpmn:outgoing>Flow_AutoApprove</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_ManagerApproval" name="Manager Approval">
+      <bpmn:incoming>Flow_NeedApproval</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToDecision</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Decision" name="Approved?" default="Flow_Rejected">
+      <bpmn:incoming>Flow_ToDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_AutoApprove" name="Auto Approve">
+      <bpmn:incoming>Flow_AutoApprove</bpmn:incoming>
+      <bpmn:outgoing>Flow_AutoToMerge</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_Merge" name="Merge">
+      <bpmn:incoming>Flow_Approved</bpmn:incoming>
+      <bpmn:incoming>Flow_AutoToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToFulfill</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Fulfill" name="Fulfill Order">
+      <bpmn:incoming>Flow_ToFulfill</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToConfirmation</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_SendConfirmation" name="Send Confirmation">
+      <bpmn:incoming>Flow_ToConfirmation</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Order Complete">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_NotifyRejection" name="Notify Rejection">
+      <bpmn:incoming>Flow_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEndRejected</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Rejected" name="Order Rejected">
+      <bpmn:incoming>Flow_ToEndRejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ToValidate" sourceRef="Start_1" targetRef="Task_Validate"/>
+    <bpmn:sequenceFlow id="Flow_ToGateway" sourceRef="Task_Validate" targetRef="GW_Amount"/>
+    <bpmn:sequenceFlow id="Flow_NeedApproval" name="Yes" sourceRef="GW_Amount" targetRef="Task_ManagerApproval">
+      <bpmn:conditionExpression>data["amount"] > 1000</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_AutoApprove" name="No" sourceRef="GW_Amount" targetRef="Task_AutoApprove"/>
+    <bpmn:sequenceFlow id="Flow_ToDecision" sourceRef="Task_ManagerApproval" targetRef="GW_Decision"/>
+    <bpmn:sequenceFlow id="Flow_Approved" name="Yes" sourceRef="GW_Decision" targetRef="GW_Merge">
+      <bpmn:conditionExpression>data["approved"] == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Rejected" name="No" sourceRef="GW_Decision" targetRef="Task_NotifyRejection"/>
+    <bpmn:sequenceFlow id="Flow_AutoToMerge" sourceRef="Task_AutoApprove" targetRef="GW_Merge"/>
+    <bpmn:sequenceFlow id="Flow_ToFulfill" sourceRef="GW_Merge" targetRef="Task_Fulfill"/>
+    <bpmn:sequenceFlow id="Flow_ToConfirmation" sourceRef="Task_Fulfill" targetRef="Task_SendConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Task_SendConfirmation" targetRef="End_1"/>
+    <bpmn:sequenceFlow id="Flow_ToEndRejected" sourceRef="Task_NotifyRejection" targetRef="End_Rejected"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="order_processing">
+      <bpmndi:BPMNShape id="Start_1_di" bpmnElement="Start_1">
+        <dc:Bounds x="152" y="282" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="130" y="325" width="80" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Validate_di" bpmnElement="Task_Validate">
+        <dc:Bounds x="240" y="260" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Amount_di" bpmnElement="GW_Amount" isMarkerVisible="true">
+        <dc:Bounds x="395" y="275" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="378" y="332" width="84" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ManagerApproval_di" bpmnElement="Task_ManagerApproval">
+        <dc:Bounds x="500" y="120" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Decision_di" bpmnElement="GW_Decision" isMarkerVisible="true">
+        <dc:Bounds x="655" y="135" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="650" y="111" width="60" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AutoApprove_di" bpmnElement="Task_AutoApprove">
+        <dc:Bounds x="500" y="390" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Merge_di" bpmnElement="GW_Merge" isMarkerVisible="true">
+        <dc:Bounds x="785" y="275" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="793" y="332" width="34" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Fulfill_di" bpmnElement="Task_Fulfill">
+        <dc:Bounds x="890" y="260" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendConfirmation_di" bpmnElement="Task_SendConfirmation">
+        <dc:Bounds x="1050" y="260" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_1_di" bpmnElement="End_1">
+        <dc:Bounds x="1212" y="282" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1190" y="325" width="80" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifyRejection_di" bpmnElement="Task_NotifyRejection">
+        <dc:Bounds x="780" y="30" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Rejected_di" bpmnElement="End_Rejected">
+        <dc:Bounds x="942" y="52" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="920" y="95" width="80" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ToValidate_di" bpmnElement="Flow_ToValidate">
+        <di:waypoint x="188" y="300"/>
+        <di:waypoint x="240" y="300"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToGateway_di" bpmnElement="Flow_ToGateway">
+        <di:waypoint x="340" y="300"/>
+        <di:waypoint x="395" y="300"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NeedApproval_di" bpmnElement="Flow_NeedApproval">
+        <di:waypoint x="420" y="275"/>
+        <di:waypoint x="420" y="160"/>
+        <di:waypoint x="500" y="160"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="428" y="215" width="22" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AutoApprove_di" bpmnElement="Flow_AutoApprove">
+        <di:waypoint x="420" y="325"/>
+        <di:waypoint x="420" y="430"/>
+        <di:waypoint x="500" y="430"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="428" y="375" width="17" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToDecision_di" bpmnElement="Flow_ToDecision">
+        <di:waypoint x="600" y="160"/>
+        <di:waypoint x="655" y="160"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Approved_di" bpmnElement="Flow_Approved">
+        <di:waypoint x="680" y="185"/>
+        <di:waypoint x="680" y="300"/>
+        <di:waypoint x="785" y="300"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="688" y="240" width="22" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Rejected_di" bpmnElement="Flow_Rejected">
+        <di:waypoint x="680" y="135"/>
+        <di:waypoint x="680" y="70"/>
+        <di:waypoint x="780" y="70"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="688" y="100" width="17" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AutoToMerge_di" bpmnElement="Flow_AutoToMerge">
+        <di:waypoint x="600" y="430"/>
+        <di:waypoint x="810" y="430"/>
+        <di:waypoint x="810" y="325"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToFulfill_di" bpmnElement="Flow_ToFulfill">
+        <di:waypoint x="835" y="300"/>
+        <di:waypoint x="890" y="300"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToConfirmation_di" bpmnElement="Flow_ToConfirmation">
+        <di:waypoint x="990" y="300"/>
+        <di:waypoint x="1050" y="300"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToEnd_di" bpmnElement="Flow_ToEnd">
+        <di:waypoint x="1150" y="300"/>
+        <di:waypoint x="1212" y="300"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToEndRejected_di" bpmnElement="Flow_ToEndRejected">
+        <di:waypoint x="880" y="70"/>
+        <di:waypoint x="942" y="70"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

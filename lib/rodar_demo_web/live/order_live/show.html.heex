@@ -1,0 +1,120 @@
+<.header>
+  Order #{@order.id}
+  <:subtitle>
+    <span class={[
+      "badge",
+      @order.status == :completed && "badge-success",
+      @order.status == :awaiting_approval && "badge-warning",
+      @order.status == :rejected && "badge-error",
+      @order.status == :error && "badge-error"
+    ]}>
+      {status_label(@order.status)}
+    </span>
+  </:subtitle>
+  <:actions>
+    <%= if @order.status == :awaiting_approval do %>
+      <button phx-click="approve" class="btn btn-success btn-sm">Approve</button>
+      <button phx-click="reject" class="btn btn-error btn-sm">Reject</button>
+    <% end %>
+    <.button navigate={~p"/"}>Back</.button>
+  </:actions>
+</.header>
+
+<div class="mt-6">
+  <h2 class="text-lg font-semibold mb-4">Process Diagram</h2>
+  <div
+    id="bpmn-viewer"
+    phx-hook="BpmnViewer"
+    phx-update="ignore"
+    class="bpmn-viewer-container"
+    data-bpmn-xml={@bpmn_xml}
+    data-visited-nodes={Jason.encode!(@visited_nodes)}
+    data-active-nodes={Jason.encode!(@active_nodes)}
+  >
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+  <div class="card bg-base-200">
+    <div class="card-body">
+      <h2 class="card-title">Order Details</h2>
+      <.list>
+        <:item title="Customer">{@order.customer}</:item>
+        <:item title="Item">{@order.item}</:item>
+        <:item title="Amount">${:erlang.float_to_binary(@order.amount / 1, decimals: 2)}</:item>
+        <:item title="Created">{Calendar.strftime(@order.created_at, "%Y-%m-%d %H:%M:%S UTC")}</:item>
+      </.list>
+    </div>
+  </div>
+
+  <div class="card bg-base-200">
+    <div class="card-body">
+      <h2 class="card-title">Process Data</h2>
+      <%= if @process_data != %{} do %>
+        <.list>
+          <:item :for={{key, value} <- Enum.sort(@process_data)} title={to_string(key)}>
+            {inspect(value)}
+          </:item>
+        </.list>
+      <% else %>
+        <p class="text-base-content/50">No process data available</p>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6">
+  <h2 class="text-lg font-semibold mb-4">Execution History</h2>
+
+  <%= if @history != [] do %>
+    <div class="flex flex-wrap gap-2 mb-6">
+      <%= for entry <- @history do %>
+        <div class={[
+          "badge badge-lg gap-1",
+          Map.get(entry, :result) == :ok && "badge-success",
+          Map.get(entry, :result) == :manual && "badge-warning",
+          is_nil(Map.get(entry, :result)) && "badge-ghost"
+        ]}>
+          <.icon name="hero-check-circle" class="size-3" :if={Map.get(entry, :result) == :ok} />
+          <.icon name="hero-clock" class="size-3" :if={Map.get(entry, :result) == :manual} />
+          {entry.node_id}
+        </div>
+        <div :if={entry != List.last(@history)} class="flex items-center text-base-content/30">
+          →
+        </div>
+      <% end %>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="table table-zebra table-sm">
+        <thead>
+          <tr>
+            <th>Node</th>
+            <th>Token</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={entry <- @history}>
+            <td class="font-mono text-sm">{entry.node_id}</td>
+            <td class="font-mono text-xs text-base-content/50">
+              {String.slice(entry.token_id || "", 0..7)}
+            </td>
+            <td>
+              <span class={[
+                "badge badge-sm",
+                Map.get(entry, :result) == :ok && "badge-success",
+                Map.get(entry, :result) == :manual && "badge-warning",
+                is_nil(Map.get(entry, :result)) && "badge-ghost"
+              ]}>
+                {Map.get(entry, :result) || "visited"}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="text-base-content/50">No execution history available</p>
+  <% end %>
+</div>
