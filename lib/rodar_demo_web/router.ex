@@ -17,6 +17,7 @@ defmodule RodarDemoWeb.Router do
   scope "/", RodarDemoWeb do
     pipe_through :browser
 
+    live "/dashboard", DashboardLive, :index
     live "/", OrderLive.Index, :index
     live "/orders/new", OrderLive.Index, :new
     live "/orders/bulk", OrderLive.Index, :bulk

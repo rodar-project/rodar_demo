@@ -25,12 +25,13 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/rodar_demo"
 import topbar from "../vendor/topbar"
 import BpmnViewerHook from "./bpmn_viewer_hook"
+import BpmnDashboardHook from "./bpmn_dashboard_hook"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, BpmnViewer: BpmnViewerHook},
+  hooks: {...colocatedHooks, BpmnViewer: BpmnViewerHook, BpmnDashboard: BpmnDashboardHook},
 })
 
 // Show progress bar on live navigation and form submits

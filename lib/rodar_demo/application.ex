@@ -13,6 +13,7 @@ defmodule RodarDemo.Application do
       RodarDemoWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:rodar_demo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: RodarDemo.PubSub},
+      RodarDemo.Telemetry.Collector,
       RodarDemo.Workflow.Manager,
       RodarDemoWeb.Endpoint
     ]
