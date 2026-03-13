@@ -46,7 +46,7 @@ defmodule RodarDemo.Telemetry.Collector do
 
     :telemetry.attach_many(
       "rodar-demo-collector",
-      RodarBpmn.Telemetry.events(),
+      Rodar.Telemetry.events(),
       &__MODULE__.handle_event/4,
       nil
     )
@@ -69,14 +69,14 @@ defmodule RodarDemo.Telemetry.Collector do
 
   # Telemetry handlers (run in caller process)
 
-  def handle_event([:rodar_bpmn, :process, :start], _measurements, metadata, _config) do
+  def handle_event([:rodar, :process, :start], _measurements, metadata, _config) do
     :ets.update_counter(@process_stats, :total, 1, {:total, 0})
     :ets.update_counter(@process_stats, :active, 1, {:active, 0})
     add_feed_entry("Process #{short_id(metadata.instance_id)} started")
     schedule_broadcast()
   end
 
-  def handle_event([:rodar_bpmn, :process, :stop], %{duration: duration}, metadata, _config) do
+  def handle_event([:rodar, :process, :stop], %{duration: duration}, metadata, _config) do
     :ets.update_counter(@process_stats, :active, -1, {:active, 0})
     status = metadata[:status] || :completed
 
@@ -87,12 +87,12 @@ defmodule RodarDemo.Telemetry.Collector do
     schedule_broadcast()
   end
 
-  def handle_event([:rodar_bpmn, :node, :start], _measurements, metadata, _config) do
+  def handle_event([:rodar, :node, :start], _measurements, metadata, _config) do
     add_feed_entry("#{metadata.node_type} #{metadata.node_id} started")
     schedule_broadcast()
   end
 
-  def handle_event([:rodar_bpmn, :node, :stop], %{duration: duration}, metadata, _config) do
+  def handle_event([:rodar, :node, :stop], %{duration: duration}, metadata, _config) do
     node_key = {metadata.node_id, metadata.node_type}
 
     # Update count
@@ -108,7 +108,7 @@ defmodule RodarDemo.Telemetry.Collector do
     schedule_broadcast()
   end
 
-  def handle_event([:rodar_bpmn, :node, :exception], _measurements, metadata, _config) do
+  def handle_event([:rodar, :node, :exception], _measurements, metadata, _config) do
     :ets.update_counter(@process_stats, :errors, 1, {:errors, 0})
 
     add_feed_entry(

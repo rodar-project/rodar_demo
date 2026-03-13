@@ -47,8 +47,8 @@ config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-# Enable RodarBpmn ETS persistence (required for process dehydration on suspend)
-config :rodar_bpmn, :persistence, adapter: RodarBpmn.Persistence.Adapter.ETS
+# Enable Rodar ETS persistence (required for process dehydration on suspend)
+config :rodar, :persistence, adapter: Rodar.Persistence.Adapter.ETS
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
