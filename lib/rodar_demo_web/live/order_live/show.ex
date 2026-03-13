@@ -1,8 +1,8 @@
 defmodule RodarDemoWeb.OrderLive.Show do
   use RodarDemoWeb, :live_view
 
-  alias RodarDemo.Workflow.Manager
-  alias RodarBpmn.Context
+  alias RodarDemo.Workflow.OrderProcessing.Manager
+  alias Rodar.Context
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -90,7 +90,7 @@ defmodule RodarDemoWeb.OrderLive.Show do
 
   defp fetch_process_info(%{process_pid: pid} = _order) do
     if Process.alive?(pid) do
-      context = RodarBpmn.Process.get_context(pid)
+      context = Rodar.Process.get_context(pid)
       history = Context.get_history(context)
       data = Context.get(context, :data)
       {history, data}

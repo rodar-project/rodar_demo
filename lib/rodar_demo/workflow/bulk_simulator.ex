@@ -3,7 +3,7 @@ defmodule RodarDemo.Workflow.BulkSimulator do
   Bulk order creation with simulated workers for user task processing.
   """
 
-  alias RodarDemo.Workflow.Manager
+  alias RodarDemo.Workflow.OrderProcessing.Manager
 
   @customers ~w(Alice Bob Carlos Diana Eve Frank Grace Hank Iris Jack)
   @last_names ~w(Johnson Smith Rivera Chen Martinez Wilson Lee Brown Patel Taylor)

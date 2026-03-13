@@ -1,7 +1,7 @@
 defmodule RodarDemoWeb.OrderLive.Index do
   use RodarDemoWeb, :live_view
 
-  alias RodarDemo.Workflow.Manager
+  alias RodarDemo.Workflow.OrderProcessing.Manager
 
   @impl true
   def mount(_params, _session, socket) do

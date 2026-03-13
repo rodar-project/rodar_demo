@@ -7,14 +7,14 @@ defmodule RodarDemo.Application do
 
   @impl true
   def start(_type, _args) do
-    RodarBpmn.Telemetry.LogHandler.attach()
+    Rodar.Telemetry.LogHandler.attach()
 
     children = [
       RodarDemoWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:rodar_demo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: RodarDemo.PubSub},
       RodarDemo.Telemetry.Collector,
-      RodarDemo.Workflow.Manager,
+      RodarDemo.Workflow.OrderProcessing.Manager,
       RodarDemoWeb.Endpoint
     ]
 
