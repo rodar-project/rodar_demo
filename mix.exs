@@ -11,7 +11,8 @@ defmodule RodarDemo.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      usage_rules: usage_rules()
     ]
   end
 
@@ -28,6 +29,13 @@ defmodule RodarDemo.MixProject do
   def cli do
     [
       preferred_envs: [precommit: :test]
+    ]
+  end
+
+  defp usage_rules do
+    [
+      file: "AGENTS.md",
+      usage_rules: [:rodar]
     ]
   end
 
@@ -59,9 +67,10 @@ defmodule RodarDemo.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:rodar, path: "../rodar_bpmn"},
+      {:rodar, path: "../rodar"},
       {:rodar_release, github: "rodar-project/rodar_release", only: :dev},
-      {:tidewave, "~> 0.1", only: :dev}
+      {:tidewave, "~> 0.1", only: :dev},
+      {:usage_rules, "~> 1.2", only: :dev}
     ]
   end
 
