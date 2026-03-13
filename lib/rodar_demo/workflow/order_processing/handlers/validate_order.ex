@@ -1,5 +1,7 @@
-defmodule RodarDemo.Workflow.Handlers.ValidateOrder do
-  @behaviour RodarBpmn.Activity.Task.Service.Handler
+defmodule RodarDemo.Workflow.OrderProcessing.Handlers.ValidateOrder do
+  @moduledoc false
+
+  @behaviour Rodar.Activity.Task.Service.Handler
 
   @impl true
   def execute(_attrs, data) do
