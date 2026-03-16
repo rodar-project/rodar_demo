@@ -28,7 +28,9 @@
     <div class="stat-title">Avg Duration</div>
     <div class="stat-value text-2xl">{format_duration_us(@process_stats.duration.avg)}</div>
     <div class="stat-desc">
-      min {format_duration_us(@process_stats.duration.min)} / max {format_duration_us(@process_stats.duration.max)}
+      min {format_duration_us(@process_stats.duration.min)} / max {format_duration_us(
+        @process_stats.duration.max
+      )}
     </div>
   </div>
 </div>
@@ -53,7 +55,9 @@
     <div class="card-body">
       <h2 class="card-title text-lg">Node Performance</h2>
       <%= if @node_stats == [] do %>
-        <p class="text-base-content/50 text-sm">No node data yet. Process an order to see stats.</p>
+        <p class="text-base-content/50 text-sm">
+          No node data yet. Process an order to see stats.
+        </p>
       <% else %>
         <div class="overflow-x-auto">
           <table class="table table-sm">
@@ -71,7 +75,11 @@
               <%= for stat <- Enum.filter(@node_stats, &(short_node_type(&1.node_type) != "Sequence Flow")) do %>
                 <tr>
                   <td class="font-mono text-xs">{stat.node_id}</td>
-                  <td><span class="badge badge-sm badge-ghost">{short_node_type(stat.node_type)}</span></td>
+                  <td>
+                    <span class="badge badge-sm badge-ghost">
+                      {short_node_type(stat.node_type)}
+                    </span>
+                  </td>
                   <td class="text-right">{stat.count}</td>
                   <td class="text-right font-mono text-xs">{format_duration_us(stat.avg)}</td>
                   <td class="text-right font-mono text-xs">{format_duration_us(stat.min)}</td>
@@ -89,7 +97,9 @@
     <div class="card-body">
       <h2 class="card-title text-lg">Live Event Feed</h2>
       <%= if @feed == [] do %>
-        <p class="text-base-content/50 text-sm">No events yet. Process an order to see the feed.</p>
+        <p class="text-base-content/50 text-sm">
+          No events yet. Process an order to see the feed.
+        </p>
       <% else %>
         <div class="overflow-y-auto max-h-80 space-y-1">
           <%= for entry <- @feed do %>

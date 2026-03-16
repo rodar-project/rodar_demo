@@ -15,6 +15,7 @@ defmodule RodarDemo.Application do
       {Phoenix.PubSub, name: RodarDemo.PubSub},
       RodarDemo.Telemetry.Collector,
       RodarDemo.Workflow.OrderProcessing.Manager,
+      RodarDemo.Workflow.EmployeeOnboarding.Manager,
       RodarDemoWeb.Endpoint
     ]
 

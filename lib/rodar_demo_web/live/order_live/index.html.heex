@@ -20,7 +20,15 @@
       <.form for={%{}} as={:order} phx-submit="create_order">
         <.input name="order[customer]" label="Customer" type="text" value="" required />
         <.input name="order[item]" label="Item" type="text" value="" required />
-        <.input name="order[amount]" label="Amount" type="number" value="" step="0.01" min="0.01" required />
+        <.input
+          name="order[amount]"
+          label="Amount"
+          type="number"
+          value=""
+          step="0.01"
+          min="0.01"
+          required
+        />
         <div class="modal-action">
           <.button navigate={~p"/"} class="btn">Cancel</.button>
           <.button type="submit" variant="primary">Create Order</.button>
@@ -40,12 +48,33 @@
         and will be processed by simulated workers.
       </p>
       <.form for={%{}} as={:bulk} phx-submit="start_bulk">
-        <.input name="bulk[quantity]" label="Number of orders" type="number"
-                value="20" min="1" max="1000" required />
-        <.input name="bulk[workers]" label="Simulated users (workers)" type="number"
-                value="3" min="1" max="20" required />
-        <.input name="bulk[avg_time]" label="Avg seconds per approval" type="number"
-                value="5" min="1" max="60" required />
+        <.input
+          name="bulk[quantity]"
+          label="Number of orders"
+          type="number"
+          value="20"
+          min="1"
+          max="1000"
+          required
+        />
+        <.input
+          name="bulk[workers]"
+          label="Simulated users (workers)"
+          type="number"
+          value="3"
+          min="1"
+          max="20"
+          required
+        />
+        <.input
+          name="bulk[avg_time]"
+          label="Avg seconds per approval"
+          type="number"
+          value="5"
+          min="1"
+          max="60"
+          required
+        />
         <div class="modal-action">
           <.button navigate={~p"/"}>Cancel</.button>
           <.button type="submit" variant="primary">Start Simulation</.button>

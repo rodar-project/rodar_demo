@@ -22,6 +22,10 @@ defmodule RodarDemoWeb.Router do
     live "/orders/new", OrderLive.Index, :new
     live "/orders/bulk", OrderLive.Index, :bulk
     live "/orders/:id", OrderLive.Show, :show
+
+    live "/onboarding", OnboardingLive.Index, :index
+    live "/onboarding/new", OnboardingLive.Index, :new
+    live "/onboarding/:id", OnboardingLive.Show, :show
   end
 
   # Other scopes may use custom stacks.

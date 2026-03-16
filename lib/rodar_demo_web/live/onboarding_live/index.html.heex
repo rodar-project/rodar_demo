@@ -1,0 +1,113 @@
+<.header>
+  Employee Onboarding
+  <:actions>
+    <.button navigate={~p"/dashboard"}>
+      <.icon name="hero-chart-bar" class="size-4 mr-1" /> Dashboard
+    </.button>
+    <.button navigate={~p"/onboarding/new"} variant="primary">
+      <.icon name="hero-plus" class="size-4 mr-1" /> New Onboarding
+    </.button>
+  </:actions>
+</.header>
+
+<%= if @live_action == :new do %>
+  <div class="modal modal-open">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg mb-4">Start New Onboarding</h3>
+      <.form for={%{}} as={:onboarding} phx-submit="start_onboarding">
+        <.input
+          name="onboarding[employee_name]"
+          label="Employee Name"
+          type="text"
+          value=""
+          required
+        />
+        <.input
+          name="onboarding[role]"
+          label="Role"
+          type="select"
+          value="other"
+          options={[{"Engineering", "engineering"}, {"Sales", "sales"}, {"Other", "other"}]}
+        />
+        <.input name="onboarding[department]" label="Department" type="text" value="" required />
+        <.input name="onboarding[start_date]" label="Start Date" type="date" value="" required />
+        <.input
+          name="onboarding[manager_name]"
+          label="Manager Name"
+          type="text"
+          value=""
+          required
+        />
+        <div class="modal-action">
+          <.button navigate={~p"/onboarding"}>Cancel</.button>
+          <.button type="submit" variant="primary">Start Onboarding</.button>
+        </div>
+      </.form>
+    </div>
+    <.link navigate={~p"/onboarding"} class="modal-backdrop">
+      <span class="sr-only">Close</span>
+    </.link>
+  </div>
+<% end %>
+
+<%= if @onboardings == [] do %>
+  <div class="text-center py-12 text-base-content/50">
+    <.icon name="hero-user-group" class="size-12 mx-auto mb-4" />
+    <p class="text-lg">No onboardings yet</p>
+    <p class="text-sm mt-1">
+      Start a new employee onboarding to see the BPMN workflow in action.
+    </p>
+  </div>
+<% else %>
+  <.table id="onboardings" rows={@onboardings} row_id={fn o -> "onboarding-#{o.id}" end}>
+    <:col :let={o} label="ID">
+      <.link navigate={~p"/onboarding/#{o.id}"} class="link link-primary">
+        #{o.id}
+      </.link>
+    </:col>
+    <:col :let={o} label="Employee">{o.employee_name}</:col>
+    <:col :let={o} label="Role">
+      <span class="capitalize">{o.role}</span>
+    </:col>
+    <:col :let={o} label="Department">{o.department}</:col>
+    <:col :let={o} label="Status">
+      <span class={[
+        "badge",
+        o.status == :completed && "badge-success",
+        o.status == :awaiting_mentor_assignment && "badge-warning",
+        o.status == :awaiting_checkin && "badge-warning",
+        o.status == :awaiting_action && "badge-warning",
+        o.status == :error && "badge-error",
+        o.status not in [
+          :completed,
+          :awaiting_mentor_assignment,
+          :awaiting_checkin,
+          :awaiting_action,
+          :error
+        ] && "badge-ghost"
+      ]}>
+        {status_label(o.status)}
+      </span>
+    </:col>
+    <:action :let={o}>
+      <%= if o.status == :awaiting_mentor_assignment do %>
+        <button
+          phx-click="assign_mentor"
+          phx-value-id={o.id}
+          phx-value-mentor="TBD Mentor"
+          class="btn btn-success btn-xs"
+        >
+          Assign Mentor
+        </button>
+      <% end %>
+      <%= if o.status == :awaiting_checkin do %>
+        <button phx-click="complete_checkin" phx-value-id={o.id} class="btn btn-success btn-xs">
+          Complete Check-in
+        </button>
+      <% end %>
+      <.link navigate={~p"/onboarding/#{o.id}"} class="btn btn-ghost btn-xs">
+        View
+      </.link>
+    </:action>
+  </.table>
+<% end %>

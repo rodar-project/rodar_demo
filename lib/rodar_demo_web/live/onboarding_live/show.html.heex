@@ -1,22 +1,29 @@
 <.header>
-  Order #{@order.id}
+  Onboarding #{@onboarding.id}
   <:subtitle>
     <span class={[
       "badge",
-      @order.status == :completed && "badge-success",
-      @order.status == :awaiting_approval && "badge-warning",
-      @order.status == :rejected && "badge-error",
-      @order.status == :error && "badge-error"
+      @onboarding.status == :completed && "badge-success",
+      @onboarding.status in [:awaiting_mentor_assignment, :awaiting_checkin, :awaiting_action] &&
+        "badge-warning",
+      @onboarding.status == :error && "badge-error"
     ]}>
-      {status_label(@order.status)}
+      {status_label(@onboarding.status)}
     </span>
   </:subtitle>
   <:actions>
-    <%= if @order.status == :awaiting_approval do %>
-      <button phx-click="approve" class="btn btn-success btn-sm">Approve</button>
-      <button phx-click="reject" class="btn btn-error btn-sm">Reject</button>
+    <%= if @onboarding.status == :awaiting_mentor_assignment do %>
+      <.form for={%{}} as={:mentor} phx-submit="assign_mentor" class="flex gap-2 items-end">
+        <.input name="mentor" label="Mentor Name" type="text" value="" required />
+        <.button type="submit" variant="primary">Assign Mentor</.button>
+      </.form>
     <% end %>
-    <.button navigate={~p"/"}>Back</.button>
+    <%= if @onboarding.status == :awaiting_checkin do %>
+      <button phx-click="complete_checkin" class="btn btn-success btn-sm">
+        Complete Check-in
+      </button>
+    <% end %>
+    <.button navigate={~p"/onboarding"}>Back</.button>
   </:actions>
 </.header>
 
@@ -37,13 +44,13 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
   <div class="card bg-base-200">
     <div class="card-body">
-      <h2 class="card-title">Order Details</h2>
+      <h2 class="card-title">Employee Details</h2>
       <.list>
-        <:item title="Customer">{@order.customer}</:item>
-        <:item title="Item">{@order.item}</:item>
-        <:item title="Amount">${:erlang.float_to_binary(@order.amount / 1, decimals: 2)}</:item>
+        <:item title="Employee">{@onboarding.employee_name}</:item>
+        <:item title="Role"><span class="capitalize">{@onboarding.role}</span></:item>
+        <:item title="Department">{@onboarding.department}</:item>
         <:item title="Created">
-          {Calendar.strftime(@order.created_at, "%Y-%m-%d %H:%M:%S UTC")}
+          {Calendar.strftime(@onboarding.created_at, "%Y-%m-%d %H:%M:%S UTC")}
         </:item>
       </.list>
     </div>
@@ -82,7 +89,7 @@
           {entry.node_id}
         </div>
         <div :if={entry != List.last(@history)} class="flex items-center text-base-content/30">
-          →
+          ->
         </div>
       <% end %>
     </div>
