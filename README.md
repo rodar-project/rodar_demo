@@ -1,6 +1,6 @@
-# RodarBPMN Demo: Order Processing Workflow
+# Rodar Demo: Order Processing Workflow
 
-A reference application demonstrating how to integrate **RodarBPMN** — an Elixir BPMN 2.0 execution engine — into a Phoenix LiveView application. This demo implements a complete order processing workflow with exclusive gateways, user tasks, service task handlers, inline script tasks, and an interactive BPMN diagram viewer.
+A reference application demonstrating how to integrate **Rodar** — an Elixir BPMN 2.0 execution engine — into a Phoenix LiveView application. This demo implements a complete order processing workflow with exclusive gateways, user tasks, service task handlers, inline script tasks, and an interactive BPMN diagram viewer.
 
 ## The Workflow
 
@@ -23,16 +23,16 @@ mix phx.server
 
 Visit [localhost:4000](http://localhost:4000) to create, approve, and reject orders.
 
-## How RodarBPMN Works
+## How Rodar Works
 
-RodarBPMN is a token-based BPMN 2.0 execution engine. It parses standard BPMN XML, builds an in-memory process map, and executes flows by passing tokens through nodes. Each node type (start event, service task, gateway, etc.) has a handler that receives the token and decides what happens next.
+Rodar is a token-based BPMN 2.0 execution engine. It parses standard BPMN XML, builds an in-memory process map, and executes flows by passing tokens through nodes. Each node type (start event, service task, gateway, etc.) has a handler that receives the token and decides what happens next.
 
 ### Core Concepts
 
 | Concept                | Description                                                              |
 | ---------------------- | ------------------------------------------------------------------------ |
 | **Process Definition** | A parsed BPMN XML stored in the Registry, keyed by process ID            |
-| **Process Instance**   | A running GenServer (`RodarBpmn.Process`) executing a definition         |
+| **Process Instance**   | A running GenServer (`Rodar.Process`) executing a definition         |
 | **Context**            | A GenServer holding all mutable state: data, metadata, execution history |
 | **Token**              | A struct that flows through the process graph, tracking current position |
 | **Element**            | A tagged tuple `{:bpmn_type, %{id: ..., outgoing: [...], ...}}`          |
@@ -58,7 +58,7 @@ RodarBPMN is a token-based BPMN 2.0 execution engine. It parses standard BPMN XM
   Process.activate/1 --- finds start event, creates token, begins execution
      |
      v
-  RodarBpmn.execute/3 -- dispatches token to each node's handler
+  Rodar.execute/3 -- dispatches token to each node's handler
      |
      +---> {:ok, context}    -- process completed
      +---> {:manual, data}   -- paused at user task (status: :suspended)
@@ -67,7 +67,7 @@ RodarBPMN is a token-based BPMN 2.0 execution engine. It parses standard BPMN XM
 
 ## Integration Guide
 
-This section walks through each step of integrating RodarBPMN into your own application, using this demo as a reference.
+This section walks through each step of integrating Rodar into your own application, using this demo as a reference.
 
 ### Step 1: Add the Dependency
 
@@ -75,12 +75,12 @@ This section walks through each step of integrating RodarBPMN into your own appl
 # mix.exs
 defp deps do
   [
-    {:rodar_bpmn, github: "rodar-project/rodar_bpmn"}
+    {:rodar, "~> 1.4"}
   ]
 end
 ```
 
-RodarBPMN starts its own supervision tree automatically (`RodarBpmn.Application`), which includes the Registry, process supervisors, event bus, and optionally a persistence adapter.
+Rodar starts its own supervision tree automatically (`Rodar.Application`), which includes the Registry, process supervisors, event bus, and optionally a persistence adapter.
 
 ### Step 2: Configure Persistence (Optional)
 
@@ -88,14 +88,14 @@ If your workflow uses user tasks or any element that suspends execution, enable 
 
 ```elixir
 # config/config.exs
-config :rodar_bpmn, :persistence, adapter: RodarBpmn.Persistence.Adapter.ETS
+config :rodar, :persistence, adapter: Rodar.Persistence.Adapter.ETS
 ```
 
-The ETS adapter is suitable for development. For production, implement the `RodarBpmn.Persistence` behaviour with your own adapter (e.g., backed by a database).
+The ETS adapter is suitable for development. For production, implement the `Rodar.Persistence` behaviour with your own adapter (e.g., backed by a database).
 
 ### Step 3: Define Your BPMN Process
 
-Create a standard BPMN 2.0 XML file. RodarBPMN supports all common elements:
+Create a standard BPMN 2.0 XML file. Rodar supports all common elements:
 
 ```xml
 <!-- priv/bpmn/my_process.bpmn -->
@@ -132,11 +132,11 @@ Create a standard BPMN 2.0 XML file. RodarBPMN supports all common elements:
 
 ### Step 4: Write Service Task Handlers
 
-Service tasks require a handler module implementing the `RodarBpmn.Activity.Task.Service.Handler` behaviour:
+Service tasks require a handler module implementing the `Rodar.Activity.Task.Service.Handler` behaviour:
 
 ```elixir
 defmodule MyApp.Handlers.DoWork do
-  @behaviour RodarBpmn.Activity.Task.Service.Handler
+  @behaviour Rodar.Activity.Task.Service.Handler
 
   @impl true
   def execute(attrs, data) do
@@ -175,14 +175,14 @@ Register your handler modules in the `TaskRegistry` by BPMN element ID, then par
 
 ```elixir
 # Register handlers by task element ID
-RodarBpmn.TaskRegistry.register("Task_DoWork", MyApp.Handlers.DoWork)
-RodarBpmn.TaskRegistry.register("Task_Notify", MyApp.Handlers.Notify)
+Rodar.TaskRegistry.register("Task_DoWork", MyApp.Handlers.DoWork)
+Rodar.TaskRegistry.register("Task_Notify", MyApp.Handlers.Notify)
 
 # Parse and register the BPMN definition
 xml = File.read!("priv/bpmn/my_process.bpmn")
-diagram = RodarBpmn.Engine.Diagram.load(xml)
+diagram = Rodar.Engine.Diagram.load(xml)
 [{:bpmn_process, _attrs, _elements} = definition] = diagram.processes
-RodarBpmn.Registry.register("my_process", definition)
+Rodar.Registry.register("my_process", definition)
 ```
 
 The `Service` task handler automatically resolves handlers from the `TaskRegistry` by element ID at runtime — no manual patching of parsed elements is needed.
@@ -192,28 +192,28 @@ The `Service` task handler automatically resolves handlers from the `TaskRegistr
 ```elixir
 # Option A: Step by step (more control)
 {:ok, pid} = DynamicSupervisor.start_child(
-  RodarBpmn.ProcessSupervisor,
-  {RodarBpmn.Process, {"my_process", %{}}}
+  Rodar.ProcessSupervisor,
+  {Rodar.Process, {"my_process", %{}}}
 )
 
-context = RodarBpmn.Process.get_context(pid)
+context = Rodar.Process.get_context(pid)
 
 # Set initial data
-RodarBpmn.Context.put_data(context, "customer", "Alice")
-RodarBpmn.Context.put_data(context, "amount", 500)
+Rodar.Context.put_data(context, "customer", "Alice")
+Rodar.Context.put_data(context, "amount", 500)
 
 # Activate — blocks until completion or user task
-RodarBpmn.Process.activate(pid)
+Rodar.Process.activate(pid)
 
 # Check result
-case RodarBpmn.Process.status(pid) do
+case Rodar.Process.status(pid) do
   :completed -> IO.puts("Done!")
   :suspended -> IO.puts("Waiting for user input")
   :error     -> IO.puts("Something went wrong")
 end
 
 # Option B: One-liner (creates + activates)
-{:ok, pid} = RodarBpmn.Process.create_and_run("my_process", %{"customer" => "Alice"})
+{:ok, pid} = Rodar.Process.create_and_run("my_process", %{"customer" => "Alice"})
 ```
 
 ### Step 7: Handle User Tasks
@@ -222,14 +222,14 @@ When execution hits a user task, the process suspends and returns `{:manual, tas
 
 ```elixir
 # Get the context and process map
-context = RodarBpmn.Process.get_context(pid)
-process_map = RodarBpmn.Context.get(context, :process)
+context = Rodar.Process.get_context(pid)
+process_map = Rodar.Context.get(context, :process)
 
 # Find the user task element by its BPMN ID
 user_task = Map.get(process_map, "Task_ManagerApproval")
 
 # Resume with user input (map is merged into context data)
-result = RodarBpmn.Activity.Task.User.resume(user_task, context, %{
+result = Rodar.Activity.Task.User.resume(user_task, context, %{
   "approved" => true,
   "comment" => "Looks good"
 })
@@ -246,23 +246,23 @@ end
 Every node visit is recorded automatically:
 
 ```elixir
-context = RodarBpmn.Process.get_context(pid)
+context = Rodar.Process.get_context(pid)
 
 # Full execution history
-history = RodarBpmn.Context.get_history(context)
+history = Rodar.Context.get_history(context)
 # => [%{node_id: "Start_1", token_id: "abc-123", ...}, ...]
 
 # History for a specific node
-node_history = RodarBpmn.Context.get_node_history(context, "Task_Validate")
+node_history = Rodar.Context.get_node_history(context, "Task_Validate")
 
 # All process data
-data = RodarBpmn.Context.get(context, :data)
+data = Rodar.Context.get(context, :data)
 # => %{"customer" => "Alice", "validated" => true, "fulfilled" => true, ...}
 ```
 
 ## Condition Expressions
 
-Sequence flows leaving exclusive gateways can have condition expressions. RodarBPMN supports two expression languages:
+Sequence flows leaving exclusive gateways can have condition expressions. Rodar supports two expression languages:
 
 ### Elixir (Sandboxed)
 
@@ -374,13 +374,13 @@ Inter-process communication via publish/subscribe:
 
 ```elixir
 # Subscribe (typically done by catch events automatically)
-RodarBpmn.Event.Bus.subscribe(:message, "order_shipped", %{
+Rodar.Event.Bus.subscribe(:message, "order_shipped", %{
   context: context,
   correlation: %{key: "order_id", value: "ORD-123"}
 })
 
 # Publish (typically done by throw events)
-RodarBpmn.Event.Bus.publish(:signal, "system_shutdown", %{reason: "maintenance"})
+Rodar.Event.Bus.publish(:signal, "system_shutdown", %{reason: "maintenance"})
 ```
 
 ### Process Validation
@@ -388,13 +388,13 @@ RodarBpmn.Event.Bus.publish(:signal, "system_shutdown", %{reason: "maintenance"}
 Validate process structure before execution:
 
 ```elixir
-case RodarBpmn.Validation.validate(process_map) do
+case Rodar.Validation.validate(process_map) do
   {:ok, _}       -> # Valid
   {:error, issues} -> # List of structural issues
 end
 
 # Or raise on invalid
-RodarBpmn.Validation.validate!(process_map)
+Rodar.Validation.validate!(process_map)
 ```
 
 Checks: start/end event presence, sequence flow reference integrity, orphan nodes, gateway outgoing requirements, exclusive gateway defaults, boundary event attachment.
@@ -405,23 +405,23 @@ The Registry supports multiple versions of each process definition:
 
 ```elixir
 # Register (auto-increments version)
-RodarBpmn.Registry.register("my_process", definition)
+Rodar.Registry.register("my_process", definition)
 
 # Register with explicit version
-{:ok, 5} = RodarBpmn.Registry.register("my_process", definition, version: 5)
+{:ok, 5} = Rodar.Registry.register("my_process", definition, version: 5)
 
 # Lookup latest
-{:ok, definition} = RodarBpmn.Registry.lookup("my_process")
+{:ok, definition} = Rodar.Registry.lookup("my_process")
 
 # Lookup specific version
-{:ok, definition} = RodarBpmn.Registry.lookup("my_process", 3)
+{:ok, definition} = Rodar.Registry.lookup("my_process", 3)
 
 # List versions
-RodarBpmn.Registry.versions("my_process")
+Rodar.Registry.versions("my_process")
 # => [%{version: 1, deprecated: false}, %{version: 2, deprecated: false}]
 
 # Deprecate old version
-RodarBpmn.Registry.deprecate("my_process", 1)
+Rodar.Registry.deprecate("my_process", 1)
 ```
 
 ### Process Migration
@@ -430,13 +430,13 @@ Migrate running instances to a new definition version:
 
 ```elixir
 # Check compatibility first
-case RodarBpmn.Migration.check_compatibility(pid, new_definition) do
-  :ok -> RodarBpmn.Migration.migrate(pid, new_definition)
+case Rodar.Migration.check_compatibility(pid, new_definition) do
+  :ok -> Rodar.Migration.migrate(pid, new_definition)
   {:error, reasons} -> IO.inspect(reasons)
 end
 
 # Force migration (skip compatibility check)
-RodarBpmn.Migration.migrate(pid, new_definition, force: true)
+Rodar.Migration.migrate(pid, new_definition, force: true)
 ```
 
 ### Persistence (Dehydrate/Rehydrate)
@@ -445,17 +445,17 @@ Save and restore process state for long-running workflows:
 
 ```elixir
 # Save current state
-{:ok, instance_id} = RodarBpmn.Process.dehydrate(pid)
+{:ok, instance_id} = Rodar.Process.dehydrate(pid)
 
 # Later, restore from saved state
-{:ok, new_pid} = RodarBpmn.Process.rehydrate(instance_id)
+{:ok, new_pid} = Rodar.Process.rehydrate(instance_id)
 ```
 
-Implement the `RodarBpmn.Persistence` behaviour for custom storage:
+Implement the `Rodar.Persistence` behaviour for custom storage:
 
 ```elixir
 defmodule MyApp.BpmnPersistence do
-  @behaviour RodarBpmn.Persistence
+  @behaviour Rodar.Persistence
 
   @impl true
   def save(instance_id, snapshot), do: # store to database
@@ -470,7 +470,7 @@ end
 
 ```elixir
 # config/config.exs
-config :rodar_bpmn, :persistence, adapter: MyApp.BpmnPersistence
+config :rodar, :persistence, adapter: MyApp.BpmnPersistence
 ```
 
 ### Hooks (Observational)
@@ -478,21 +478,21 @@ config :rodar_bpmn, :persistence, adapter: MyApp.BpmnPersistence
 Register callbacks for execution events:
 
 ```elixir
-context = RodarBpmn.Process.get_context(pid)
+context = Rodar.Process.get_context(pid)
 
-RodarBpmn.Hooks.register(context, :before_node, fn info ->
+Rodar.Hooks.register(context, :before_node, fn info ->
   IO.puts("Entering node: #{info.node_id}")
 end)
 
-RodarBpmn.Hooks.register(context, :after_node, fn info ->
+Rodar.Hooks.register(context, :after_node, fn info ->
   IO.puts("Completed node: #{info.node_id}")
 end)
 
-RodarBpmn.Hooks.register(context, :on_error, fn info ->
+Rodar.Hooks.register(context, :on_error, fn info ->
   Logger.error("Error at #{info.node_id}: #{inspect(info.error)}")
 end)
 
-RodarBpmn.Hooks.register(context, :on_complete, fn info ->
+Rodar.Hooks.register(context, :on_complete, fn info ->
   IO.puts("Process completed!")
 end)
 ```
@@ -505,20 +505,20 @@ Query running instances and system health:
 
 ```elixir
 # All running instances
-RodarBpmn.Observability.running_instances()
+Rodar.Observability.running_instances()
 # => [%{pid: #PID<...>, instance_id: "abc", status: :running, process_id: "my_process", ...}]
 
 # Suspended instances (waiting for user input)
-RodarBpmn.Observability.waiting_instances()
+Rodar.Observability.waiting_instances()
 
 # Filter by process ID and version
-RodarBpmn.Observability.instances_by_version("my_process", 2)
+Rodar.Observability.instances_by_version("my_process", 2)
 
 # Execution history for an instance
-RodarBpmn.Observability.execution_history(pid)
+Rodar.Observability.execution_history(pid)
 
 # System health check
-RodarBpmn.Observability.health()
+Rodar.Observability.health()
 # => %{process_supervisor: ..., context_supervisor: ..., registry: ..., ...}
 ```
 
@@ -528,7 +528,7 @@ Register handlers for service tasks by element ID. The `Service` module automati
 
 ```elixir
 defmodule MyApp.Handlers.CheckInventory do
-  @behaviour RodarBpmn.Activity.Task.Service.Handler
+  @behaviour Rodar.Activity.Task.Service.Handler
 
   @impl true
   def execute(_attrs, data) do
@@ -537,24 +537,24 @@ defmodule MyApp.Handlers.CheckInventory do
 end
 
 # Register by element ID — resolved automatically by service tasks
-RodarBpmn.TaskRegistry.register("Task_CheckInventory", MyApp.Handlers.CheckInventory)
+Rodar.TaskRegistry.register("Task_CheckInventory", MyApp.Handlers.CheckInventory)
 ```
 
-For non-service task types (or fully custom element types), implement the lower-level `RodarBpmn.TaskHandler` behaviour:
+For non-service task types (or fully custom element types), implement the lower-level `Rodar.TaskHandler` behaviour:
 
 ```elixir
 defmodule MyApp.CustomHandler do
-  @behaviour RodarBpmn.TaskHandler
+  @behaviour Rodar.TaskHandler
 
   @impl true
   def token_in(element, context) do
     # Custom logic
-    RodarBpmn.release_token(element |> elem(1) |> Map.get(:outgoing), context)
+    Rodar.release_token(element |> elem(1) |> Map.get(:outgoing), context)
   end
 end
 
 # Register by element type (fallback for all tasks of this type)
-RodarBpmn.TaskRegistry.register(:bpmn_activity_task_business_rule, MyApp.CustomHandler)
+Rodar.TaskRegistry.register(:bpmn_activity_task_business_rule, MyApp.CustomHandler)
 ```
 
 ### Multi-Participant Collaboration
@@ -562,16 +562,16 @@ RodarBpmn.TaskRegistry.register(:bpmn_activity_task_business_rule, MyApp.CustomH
 Orchestrate multiple processes communicating via message flows:
 
 ```elixir
-diagram = RodarBpmn.Engine.Diagram.load(xml_with_collaboration)
+diagram = Rodar.Engine.Diagram.load(xml_with_collaboration)
 
 {:ok, %{collaboration_id: id, instances: instances}} =
-  RodarBpmn.Collaboration.start(diagram, %{})
+  Rodar.Collaboration.start(diagram, %{})
 
 # All participant processes are created and activated
 # Message flows are wired via the Event Bus
 
 # Stop all instances
-RodarBpmn.Collaboration.stop(%{instances: instances})
+Rodar.Collaboration.stop(%{instances: instances})
 ```
 
 ## Project Structure
@@ -603,17 +603,17 @@ Note: Auto-approval logic is embedded directly in the BPMN file as an inline Eli
 
 ## Supervision Tree
 
-RodarBPMN starts its own supervision tree automatically. Your application only needs to register process definitions and create instances:
+Rodar starts its own supervision tree automatically. Your application only needs to register process definitions and create instances:
 
 ```
-RodarBpmn.Application
-  |-- RodarBpmn.ProcessRegistry      (Elixir Registry, :unique)
-  |-- RodarBpmn.EventRegistry        (Elixir Registry, :duplicate)
-  |-- RodarBpmn.Registry             (versioned process definitions)
-  |-- RodarBpmn.TaskRegistry          (custom task handler registrations)
-  |-- RodarBpmn.ContextSupervisor    (DynamicSupervisor for contexts)
-  |-- RodarBpmn.ProcessSupervisor    (DynamicSupervisor for instances)
-  |-- RodarBpmn.Event.Start.Trigger  (auto-start on signal/message events)
+Rodar.Application
+  |-- Rodar.ProcessRegistry      (Elixir Registry, :unique)
+  |-- Rodar.EventRegistry        (Elixir Registry, :duplicate)
+  |-- Rodar.Registry             (versioned process definitions)
+  |-- Rodar.TaskRegistry          (custom task handler registrations)
+  |-- Rodar.ContextSupervisor    (DynamicSupervisor for contexts)
+  |-- Rodar.ProcessSupervisor    (DynamicSupervisor for instances)
+  |-- Rodar.Event.Start.Trigger  (auto-start on signal/message events)
   +-- Persistence Adapter            (if configured)
 ```
 
